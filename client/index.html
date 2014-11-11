@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body ng-app="app">
+    <div ng-controller="MainCtrl">
+
+    </div>
+<!--<script src="lib/angular.min.js"></script>-->
+<!--<script src="lib/angular-websocket.js"></script>-->
+<!--<script src="app.js"></script>-->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    console.log("back in da place");
+    var rpcCounter = 0;
+    var socket = io();
+
+    function login(token) {
+        var rpcDatas = {};
+
+        rpcDatas.rpcId = rpcCounter;
+        rpcCounter++;
+
+        rpcDatas.data = {};
+        rpcDatas.data.token = token;
+        socket.emit("login", rpcDatas);
+    }
+
+    login("42");
+
+    socket.on("login_response", function (data) {
+        console.log(data);
+    });
+
+//    var socket = io('http://localhost');
+//    socket.on('connect', function(){
+//        socket.on('event', function(data){});
+//        socket.on('disconnect', function(){});
+//    });
+</script>
+</body>
+</html>

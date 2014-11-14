@@ -94,6 +94,8 @@ roomManagerModule.extend({
     },
     onLogin: function (req) {
         var self = this;
+
+        var _client = null;
         async.waterfall([
             function (next) {
                 authenticator.getRestaurantFromToken(req.data.token, next);
@@ -101,6 +103,7 @@ roomManagerModule.extend({
             //TODO: fetch lists of commands and send it to client
             function (data, next) {
                 var client = new Client(req, data.restaurantId, req);
+                _client = client;
                 logger.info(self.name, "created client with id ["+req.clientId+"] for restaurant["+data.restaurantId+"]");
 
                 var room = self._.rooms[data.restaurantId];
@@ -116,13 +119,16 @@ roomManagerModule.extend({
             },
             function (data, next) {
                 clientHandler.onClientJoinedRoom(req, data.clientId, data.roomId, next);
+            },
+            function (next) {
+                orderPersistence.getAllOrders(_client, next);
             }
-        ], function (err, res) {
+        ], function (err, orders) {
             if (err) {
-                req.respond({ success: false, error: err });
+                req.respond({ success: false, error: err, data: null });
                 logger.error(self.name, "client ["+req.clientId+"] couldn't log in because: "+err);
             } else {
-                req.respond({ success: true, error: null });
+                req.respond({ success: true, error: null, data: { orders: orders } });
                 logger.info(self.name, "client ["+req.clientId+"] joined room "+req.roomName);
                 console.log("client "+req.clientId+" logged in");
             }
@@ -146,7 +152,7 @@ roomManagerModule.extend({
             //TODO: validate model
             //TODO: check products
             function (next) {
-                orderPersistence.saveOrder(req.data, next);
+                orderPersistence.saveOrder(client, req.data, next);
             },
             function (order, next) {
                 client.broadcast("orderCreated", order);

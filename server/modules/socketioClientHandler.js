@@ -33,7 +33,6 @@ var init = function (dependencies, callback) {
 
     socketio.addCommand("login");
     socketio.addCommand("createOrder");
-    socketio.addCommand("test");
 
     socketio.addListener(this._.onSocketIoEvent.bind(this));
 

@@ -27,9 +27,9 @@ dummyAuthenticatorModule.extend({
 
     getRestaurantFromToken: function (token, callback) {
         if (token === "42") {
-            callback(null, 42);
+            callback(null, {restaurantId: 42});
         } else if (token === "12") {
-            callback(null, 12);
+            callback(null, {restaurantId: 12});
         } else {
             callback("unknown restaurantId "+token, null);
         }

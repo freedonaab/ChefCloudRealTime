@@ -38,13 +38,39 @@ RPCCall.prototype.leave = function (roomName) {
     this._.socket.leave(roomName);
 };
 
-RPCCall.prototype.broadcast = function (data) {
-    if (this.roomName != null) {
-        this._.socket.to(this.roomName ).emit(data);
-    }
+RPCCall.prototype.emit = function (eventName, data) {
+    var rpcData = {
+        rpcId: null,
+        data: data
+    };
+    this._.socket.emit(eventName, rpcData);
 };
 
 
+RPCCall.prototype.broadcast = function (eventName, data) {
+    if (this.roomName != null) {
+        var rpcData = {
+            rpcId: null,
+            data: data
+        };
+        this._.socket.broadcast.to(this.roomName).emit(eventName, rpcData);
+    }
+};
+
+var addCommandToSocket = function (socket, commandName) {
+    var self = this;
+    var _func = function (msg) {
+
+        var rpcCall =  new RPCCall(socket, commandName, msg.rpcId, msg.data);
+
+        for (var i in self._.listeners) {
+            var listener = self._.listeners[i];
+            listener(rpcCall);
+        }
+        logger.info(self.name, "command ["+commandName+"] called by ["+socket._.id+"] ");
+    };
+    socket.on(commandName, _func);
+};
 
 var init = function (dependencies, callback) {
 
@@ -55,7 +81,10 @@ var init = function (dependencies, callback) {
 
     this._ = {};
     this._.io = new SocketIOServer(express.server);
+    this._.commands = [];
+    this._.addCommandToSocket = addCommandToSocket.bind(this);
 
+    //TODO move route definition to socketio client handler
     this._.io.on('connection', function(socket) {
 
         socket._ = {};
@@ -63,40 +92,11 @@ var init = function (dependencies, callback) {
 
         logger.info(self.name, "connected to websocket "+socket._.id);
 
-        socket.on('login', function (msg) {
 
-            var rpcCall =  new RPCCall(socket, 'login', msg.rpcId, msg.data);
-
-            for (var i in self._.listeners) {
-                var listener = self._.listeners[i];
-                listener(rpcCall);
-            }
-            console.log(rpcCall);
-        });
-
-        socket.on('create', function (msg) {
-
-            var rpcCall =  new RPCCall(socket, 'create', msg.rpcId, msg.data);
-
-            for (var i in self._.listeners) {
-                var listener = self._.listeners[i];
-                listener(rpcCall);
-            }
-            console.log(rpcCall);
-        });
-
-        socket.on('payment', function (msg) {
-
-            var rpcCall =  new RPCCall(socket, 'payment', msg.rpcId, msg.data);
-
-            for (var i in self._.listeners) {
-                var listener = self._.listeners[i];
-                listener(rpcCall);
-            }
-            console.log(rpcCall);
-        });
-
-
+        for (var i in self._.commands) {
+            var commandName = self._.commands[i];
+            self._.addCommandToSocket(socket, commandName);
+        }
 
     });
     this._.io.on('error', function (err) {
@@ -122,6 +122,10 @@ var socketioModule = new Module("socketio", {
 });
 
 socketioModule.extend({
+
+    addCommand: function (commandName) {
+        this._.commands.push(commandName);
+    },
 
     addListener: function (listener) {
         this._.listeners.push(listener);

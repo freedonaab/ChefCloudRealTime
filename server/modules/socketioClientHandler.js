@@ -4,8 +4,16 @@ var logger = null;
 var socketio = null;
 
 var _onSocketIoEvent = function (rpcCall) {
-    for (var i in this._.onLoginListeners) {
-        var listener = this._.onLoginListeners[i];
+    var listeners = [];
+    if (rpcCall.eventName === "login") {
+        listeners = this._.onLoginListeners;
+    } else if (rpcCall.eventName === "createOrder") {
+        listeners = this._.onCreateOrderListeners;
+    } else {
+        listeners = [];
+    }
+    for (var i in listeners) {
+        var listener = listeners[i];
         listener(rpcCall);
     }
 
@@ -16,11 +24,16 @@ var init = function (dependencies, callback) {
 
     this._ = {};
     this._.onLoginListeners = [];
+    this._.onCreateOrderListeners = [];
 
     this._.onSocketIoEvent = _onSocketIoEvent;
 
     logger = dependencies.log;
     socketio = dependencies.socketio;
+
+    socketio.addCommand("login");
+    socketio.addCommand("createOrder");
+    socketio.addCommand("test");
 
     socketio.addListener(this._.onSocketIoEvent.bind(this));
 
@@ -45,9 +58,16 @@ socketIOClientHandler.extend({
             case "login":
                 this._.onLoginListeners.push(listener);
                 break;
+            case "createOrder":
+                this._.onCreateOrderListeners.push(listener);
+                break;
             default:
                 break;
         }
+    },
+    onClientJoinedRoom: function (req, clientId, roomName, callback) {
+        req.join("restaurant:"+roomName);
+        callback();
     }
 
 });

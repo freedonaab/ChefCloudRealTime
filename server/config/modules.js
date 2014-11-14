@@ -8,5 +8,6 @@ module.exports = [
     "roomManager",
     "scalaServer",
     "scalaServerProductProvider",
-    "postgre"
+    "postgre",
+    "redisOrderPersistence"
 ];

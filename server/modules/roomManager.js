@@ -60,6 +60,7 @@ var init = function (dependencies, callback) {
 
     clientHandler.addListener("login", this.onLogin.bind(this));
     clientHandler.addListener("createOrder", this.onCreateOrder.bind(this));
+    clientHandler.addListener("deleteOrder", this.onDeleteOrder.bind(this));
 
     logger.log(this.name, "done initializing room manager");
     callback();
@@ -166,6 +167,39 @@ roomManagerModule.extend({
             } else {
                 logger.info(self.name, "ceateOrder success!");
                 client.emit("orderCreated", order);
+            }
+        });
+    },
+
+    onDeleteOrder: function (req) {
+        var self = this;
+        var client = null;
+        var room = null;
+        async.waterfall([
+            function (next) {
+                getClientAndRoomFromClientId(self, req.clientId, next);
+            },
+            function (__client, __room, next) {
+                client = __client;
+                room = __room;
+                console.log(req.data);
+                next();
+            },
+            function (next) {
+                orderPersistence.deleteOrder(client, req.data.orderId, next);
+            },
+            function (next) {
+                client.broadcast("orderDeleted", req.data.orderId);
+                next(null);
+            }
+            //TODO: broadcast order
+        ], function (err) {
+            if (err) {
+                req.respond({ success: false, error: err, data: null});
+                logger.error(self.name, "deleteOrder: "+err);
+            } else {
+                logger.info(self.name, "deleteOrder success!");
+                client.emit("orderDeleted", { orderId: req.data.orderId });
             }
         });
     }

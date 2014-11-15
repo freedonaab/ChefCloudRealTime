@@ -124,6 +124,27 @@ redisOrderPersistenceModule.extend({
                 callback(null, orders);
             }
         });
+    },
+
+    deleteOrder: function (client, orderId, callback) {
+        var self = this;
+
+        async.waterfall([
+            function (next) {
+                redis.client.del("restaurants:"+client.restaurantId+":orders:"+orderId, next);
+            },
+            function (res, next) {
+                redis.client.lrem("restaurants:"+client.restaurantId, 0, orderId, next);
+            }
+        ], function (err) {
+            if (err) {
+                logger.error(self.name, "error while deleting all orders from restaurant["+client.restaurantId+"] :"+err);
+                callback(err);
+            } else {
+                logger.info(self.name, "successfully deleted all orders from restaurant["+client.restaurantId+"]");
+                callback(null);
+            }
+        });
     }
 
 });

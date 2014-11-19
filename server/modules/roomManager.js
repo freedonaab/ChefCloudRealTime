@@ -1,6 +1,7 @@
 var Module = require("./lib/module");
 var async = require("async");
 var shortid = require("shortid");
+var _ = require("underscore");
 
 
 
@@ -8,6 +9,7 @@ var logger = null;
 var clientHandler = null;
 var authenticator = null;
 var orderPersistence = null;
+var productProvider = null;
 
 
 function Client(clientRequest, restaurantId, clientDelegate) {
@@ -57,6 +59,7 @@ var init = function (dependencies, callback) {
     clientHandler = dependencies.clientHandler;
     authenticator = dependencies.authenticator;
     orderPersistence = dependencies.orderPersistence;
+    productProvider = dependencies.productProvider;
 
     clientHandler.addListener("login", this.onLogin.bind(this));
     clientHandler.addListener("createOrder", this.onCreateOrder.bind(this));
@@ -73,7 +76,7 @@ var onEvent = function (eventName, args) {
 var roomManagerModule = new Module("roomManager", {
     init: init,
     onEvent: onEvent,
-    dependencies: ["log", "clientHandler", "authenticator", "orderPersistence"]
+    dependencies: ["log", "clientHandler", "authenticator", "orderPersistence", "productProvider"]
 });
 
 var getClientAndRoomFromClientId = function (self, clientId, next) {
@@ -151,8 +154,25 @@ roomManagerModule.extend({
                 next();
             },
             //TODO: validate model
-            //TODO: check products
             function (next) {
+                var products = _.keys(req.data.products);
+                console.log(products);
+                async.mapSeries(products, function (item, next) {
+                    productProvider.getProduct(item, function (err, res) {
+                        console.log(err, res);
+                        if (err || !res) {
+                            next("product with id "+item+" does not exists.");
+                        } else {
+                            next(null, res);
+                        }
+                    });
+                }, function (err, res) {
+                    console.log(res);
+                    next(err, res);
+                });
+            },
+            function (products, next) {
+                req.data.products = products;
                 orderPersistence.saveOrder(client, req.data, next);
             },
             function (order, next) {

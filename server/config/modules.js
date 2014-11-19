@@ -7,7 +7,5 @@ module.exports = [
     "dummyAuthenticator",
     "roomManager",
     "scalaServer",
-    "defaultProductProvider",
-    "postgres",
     "redisOrderPersistence"
 ];

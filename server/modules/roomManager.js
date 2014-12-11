@@ -262,7 +262,32 @@ roomManagerModule.extend({
     },
 
     onPayOrder: function (req) {
-
+        var self = this;
+        var client = null;
+        var room = null;
+        async.waterfall([
+            function (next) {
+                getClientAndRoomFromClientId(self, req.clientId, next);
+            },
+            function (__client, __room, next) {
+                client = __client;
+                room = __room;
+                console.log(req.data);
+                next();
+            },
+            function (next) {
+                orderPersistence.deleteOrder(client, req.data.orderId, next);
+            },
+            //TODO: broadcast order
+        ], function (err, order) {
+            if (err) {
+                req.respond({ success: false, error: err });
+                logger.error(self.name, "payOrder: "+err);
+            } else {
+                logger.info(self.name, "payOrder: success!");
+                client.emit("orderPaid", order);
+            }
+        });
     },
 
     onDeleteOrder: function (req) {

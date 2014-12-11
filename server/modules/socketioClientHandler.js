@@ -30,7 +30,7 @@ var init = function (dependencies, callback) {
     socketio.addCommand("createOrder");
     socketio.addCommand("deleteOrder");
     socketio.addCommand("editOrder");
-    socketio.addCommand("editOrderProducts");
+    socketio.addCommand("payOrder");
 
     socketio.addListener(this._.onSocketIoEvent.bind(this));
 

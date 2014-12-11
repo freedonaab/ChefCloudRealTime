@@ -4,6 +4,7 @@ var async = require("async");
 
 var logger = null;
 var redis = null;
+var postgres = null;
 
 var init = function (dependencies, callback) {
     this._ = {};

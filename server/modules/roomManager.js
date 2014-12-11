@@ -64,6 +64,7 @@ var init = function (dependencies, callback) {
     clientHandler.addListener("login", this.onLogin.bind(this));
     clientHandler.addListener("createOrder", this.onCreateOrder.bind(this));
     clientHandler.addListener("deleteOrder", this.onDeleteOrder.bind(this));
+    clientHandler.addListener("editOrder", this.onEditOrder.bind(this));
 
     logger.log(this.name, "done initializing room manager");
     callback();
@@ -155,7 +156,7 @@ roomManagerModule.extend({
             },
             //TODO: validate model
             function (next) {
-                var products = _.keys(req.data.products);
+                var products = _.keys(req.data.order.products);
                 console.log(products);
                 async.mapSeries(products, function (item, next) {
                     productProvider.getProduct(item, function (err, res) {
@@ -172,8 +173,16 @@ roomManagerModule.extend({
                 });
             },
             function (products, next) {
-                req.data.products = products;
-                orderPersistence.saveOrder(client, req.data, next);
+                //req.data.order.products = products;
+                console.log(products);
+                console.log(req.data.order.products);
+                for (var i = 0; i < products.length; ++i) {
+                    console.log(products[i], products[i].id);
+                    var product = req.data.order.products[products[i].id];
+
+                    _.extend(product.product, products[i]);
+                }
+                orderPersistence.saveOrder(client, req.data.order, next);
             },
             function (order, next) {
                 client.broadcast("orderCreated", order);
@@ -189,6 +198,10 @@ roomManagerModule.extend({
                 client.emit("orderCreated", order);
             }
         });
+    },
+
+    onEditOrder: function (req) {
+
     },
 
     onDeleteOrder: function (req) {

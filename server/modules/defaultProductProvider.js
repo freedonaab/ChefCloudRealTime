@@ -14,18 +14,19 @@ function RedisProductProvider(_redis) {
 
 
 RedisProductProvider.prototype.getProduct = function (productId, callback) {
+    console.log("redis: getting product : id :"+productId);
     this._.redis.client.get("products."+productId, function (err, replies) {
+        console.log("redis: getting product : result :", err, replies);
         if (err) {
             callback(err, null);
         } else {
-            console.log(replies);
-            callback(null, replies);
+            callback(null, JSON.parse(replies));
         }
     });
 };
 
 RedisProductProvider.prototype.saveProduct = function (product, callback) {
-    this._.redis.client.set("products."+product.id, product, function (err, replies) {
+    this._.redis.client.set("products."+product.id, JSON.stringify(product), function (err, replies) {
         callback(err, null);
     });
 };
@@ -79,7 +80,7 @@ postgresProductProviderModule.extend({
             },
             function (data, next) {
                 if (data.exists) {
-                    next(data.product);
+                    next(null, data.product);
                 } else {
                     if (data.product) {
                         self._.redisProductProvider.saveProduct(data.product, function (err) {
@@ -91,6 +92,7 @@ postgresProductProviderModule.extend({
                 }
             }
         ], function (err, product) {
+            console.log("final callback: result: ", err, product);
             callback(err, product);
         });
     }

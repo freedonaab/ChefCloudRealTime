@@ -29,6 +29,8 @@ var init = function (dependencies, callback) {
     socketio.addCommand("login");
     socketio.addCommand("createOrder");
     socketio.addCommand("deleteOrder");
+    socketio.addCommand("editOrder");
+    socketio.addCommand("editOrderProducts");
 
     socketio.addListener(this._.onSocketIoEvent.bind(this));
 

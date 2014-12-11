@@ -65,6 +65,7 @@ var init = function (dependencies, callback) {
     clientHandler.addListener("createOrder", this.onCreateOrder.bind(this));
     clientHandler.addListener("deleteOrder", this.onDeleteOrder.bind(this));
     clientHandler.addListener("editOrder", this.onEditOrder.bind(this));
+    clientHandler.addListener("payOrder", this.onPayOrder.bind(this));
 
     logger.log(this.name, "done initializing room manager");
     callback();
@@ -194,13 +195,73 @@ roomManagerModule.extend({
                 req.respond({ success: false, error: err });
                 logger.error(self.name, "createOrder: "+err);
             } else {
-                logger.info(self.name, "ceateOrder success!");
+                logger.info(self.name, "ceateOrder: success!");
                 client.emit("orderCreated", order);
             }
         });
     },
 
     onEditOrder: function (req) {
+        var self = this;
+        var client = null;
+        var room = null;
+        async.waterfall([
+            function (next) {
+                getClientAndRoomFromClientId(self, req.clientId, next);
+            },
+            function (__client, __room, next) {
+                client = __client;
+                room = __room;
+                console.log(req.data);
+                next();
+            },
+            //TODO: validate model
+            function (next) {
+                var products = _.keys(req.data.order.products);
+                console.log(products);
+                async.mapSeries(products, function (item, next) {
+                    productProvider.getProduct(item, function (err, res) {
+                        console.log(err, res);
+                        if (err || !res) {
+                            next("product with id "+item+" does not exists.");
+                        } else {
+                            next(null, res);
+                        }
+                    });
+                }, function (err, res) {
+                    console.log(res);
+                    next(err, res);
+                });
+            },
+            function (products, next) {
+                //req.data.order.products = products;
+                console.log(products);
+                console.log(req.data.order.products);
+                for (var i = 0; i < products.length; ++i) {
+                    console.log(products[i], products[i].id);
+                    var product = req.data.order.products[products[i].id];
+
+                    _.extend(product.product, products[i]);
+                }
+                orderPersistence.saveOrder(client, req.data.order, next);
+            },
+            function (order, next) {
+                client.broadcast("orderEdited", order);
+                next(null, order);
+            }
+            //TODO: broadcast order
+        ], function (err, order) {
+            if (err) {
+                req.respond({ success: false, error: err });
+                logger.error(self.name, "editOrder: "+err);
+            } else {
+                logger.info(self.name, "editOrder: success!");
+                client.emit("orderEdited", order);
+            }
+        });
+    },
+
+    onPayOrder: function (req) {
 
     },
 

@@ -56,6 +56,27 @@ redisOrderPersistenceModule.extend({
         redis.client.flushall(callback);
     },
 
+    payOrder: function (client, order, callback) {
+        var self = this;
+        
+        async.waterfall([
+            //remove from redis
+            //
+            function (next) {
+                //save in postgres
+                console.log("saving to psotgre");
+                next();
+            },
+            function (next) {
+                
+            }
+            
+            
+        ], function (err, res) {
+            
+        });
+    },
+    
     saveOrder: function (client, order, callback) {
         var self = this;
 

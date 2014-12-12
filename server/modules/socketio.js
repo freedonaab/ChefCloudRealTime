@@ -103,7 +103,7 @@ var init = function (dependencies, callback) {
         logger.error(self.name, "error : "+err);
     });
 
-    this._.io.listen(3000);
+    this._.io.listen(3001);
 
     this._.listeners = [];
 

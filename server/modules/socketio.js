@@ -105,7 +105,7 @@ var init = function (dependencies, callback) {
 
     console.log(config);
     //this._.io.listen(3000);
-    this._.io.listen(config.port);
+    this._.io.listen(3000);
 
     this._.listeners = [];
 

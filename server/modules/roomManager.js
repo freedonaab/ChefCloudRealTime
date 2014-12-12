@@ -12,11 +12,12 @@ var orderPersistence = null;
 var productProvider = null;
 
 
-function Client(clientRequest, restaurantId, clientDelegate) {
+function Client(clientRequest, restaurantId, userId, clientDelegate) {
     this.id = clientRequest.clientId;
     this.restaurantId = restaurantId;
     this.roomId = null;
     this.clientDelegate = clientDelegate;
+    this.userId = userId;
 }
 
 Client.prototype.emit = function (eventName, data) {
@@ -104,11 +105,11 @@ roomManagerModule.extend({
         var _client = null;
         async.waterfall([
             function (next) {
-                authenticator.getRestaurantFromToken(req.data.token, next);
+                authenticator.getRestaurantFromToken(req.data.login_info, next);
             },
             //TODO: fetch lists of commands and send it to client
             function (data, next) {
-                var client = new Client(req, data.restaurantId, req);
+                var client = new Client(req, data.restaurantId, data.userId, req);
                 _client = client;
                 logger.info(self.name, "created client with id ["+req.clientId+"] for restaurant["+data.restaurantId+"]");
 
@@ -276,16 +277,15 @@ roomManagerModule.extend({
                 next();
             },
             function (next) {
-                orderPersistence.deleteOrder(client, req.data.orderId, next);
-            },
-            //TODO: broadcast order
+                orderPersistence.payOrder(client, req.data.orderId, next);
+            }
         ], function (err, order) {
             if (err) {
-                req.respond({ success: false, error: err });
                 logger.error(self.name, "payOrder: "+err);
+                req.respond({ success: false, error: err });
             } else {
                 logger.info(self.name, "payOrder: success!");
-                client.emit("orderPaid", order);
+                client.emit("orderPaid", { success: true, error: null });
             }
         });
     },

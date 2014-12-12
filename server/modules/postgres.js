@@ -1,5 +1,6 @@
 var Module = require("./lib/module");
 var pg = require('pg');
+var _ = require("underscore");
 
 var config = require("../config/postgres");
 
@@ -81,6 +82,7 @@ postgreModule.extend({
             rowsString += table+"."+rowName;
         }
 
+
         console.log("SELECT "+rowsString+" FROM "+table+" WHERE "+table+".id = $1 ");
 
         self._.client.query("SELECT "+rowsString+" FROM "+table+" WHERE "+table+".id = $1 ", [id], function (err, res) {
@@ -91,6 +93,44 @@ postgreModule.extend({
                 callback(null, null);
             } else {
                 callback(null, res.rows[0]);
+            }
+        });
+    },
+
+    save: function (table, rows, callback) {
+        var self = this;
+
+        var rowsString = "";
+        var i = 0;
+        for (var rowKey in rows) {
+            var rowValue = rows[rowKey];
+            if (i > 0) {
+                rowsString += ", ";
+            }
+            rowsString += rowKey;
+            i++;
+        }
+
+        var valuesSring = "";
+        var i = 1;
+        for (var rowKey in rows) {
+            if (i > 1) {
+                valuesSring += ", ";
+            }
+            valuesSring += "$"+i;
+            i++;
+        }
+
+
+        console.log("INSERT INTO "+table+"("+rowsString+") VALUES("+valuesSring+")");
+
+        console.log(rows, _.values(rows));
+        self._.client.query("INSERT INTO "+table+"("+rowsString+") VALUES("+valuesSring+") RETURNING id", _.values(rows), function (err, res) {
+            console.log(err, res);
+            if (err) {
+                callback(err, null);
+            } else {
+                callback(null, res);
             }
         });
     }

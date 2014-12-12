@@ -25,8 +25,8 @@ var dummyAuthenticatorModule = new Module("authenticator", {
 
 dummyAuthenticatorModule.extend({
 
-    getRestaurantFromToken: function (token, callback) {
-        callback(null, {restaurantId: token});
+    getRestaurantFromToken: function (login_info, callback) {
+        callback(null, login_info);
         //if (token === "42") {
         //    callback(null, {restaurantId: 42});
         //} else if (token === "12") {

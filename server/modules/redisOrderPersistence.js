@@ -1,6 +1,7 @@
 var Module = require("./lib/module");
 var shortid = require("shortid");
 var async = require("async");
+var _ = require("underscore");
 
 var logger = null;
 var redis = null;
@@ -13,7 +14,7 @@ var init = function (dependencies, callback) {
 
     logger = dependencies.log;
     redis = dependencies.redis;
-
+    postgres = dependencies.postgres;
 
     var _express = dependencies.express;
     _express.addListener('/redis/flushall', _flushRedisCallback.bind(this));
@@ -42,7 +43,7 @@ var _flushRedisCallback = function (req, res) {
 var redisOrderPersistenceModule = new Module("orderPersistence", {
     init: init,
     onEvent: onEvent,
-    dependencies: ["log", "redis", "express"]
+    dependencies: ["log", "redis", "express", "postgres"]
 });
 
 //restaurant:$id:orders -> list of order ids
@@ -56,24 +57,56 @@ redisOrderPersistenceModule.extend({
         redis.client.flushall(callback);
     },
 
-    payOrder: function (client, order, callback) {
+    payOrder: function (client, orderId, callback) {
         var self = this;
-        
+        var _order = null;
+
         async.waterfall([
-            //remove from redis
-            //
+            //get order (check if exists)
             function (next) {
+                self.getOrder(client, orderId, next);
+            },
+            function (order, next) {
                 //save in postgres
-                console.log("saving to psotgre");
-                next();
+                _order = order;
+                postgres.save("orders", {
+                    created_by: client.userId,
+                    restaurant_id: client.restaurantId,
+                    price: order.total,
+                    created_at: new Date()
+                }, next);
+            },
+            function (res, next) {
+                //save products in postgres
+                async.eachSeries(_.values(_order.products),
+                    function (item, next) {
+                        postgres.save("order_products", {
+                            id: 42,
+                            order_id: res.rows[0].id,
+                            product_id: item.product.id,
+                            quantity: item.count
+                        }, next);
+                    },
+                    next
+                );
             },
             function (next) {
-                
+                //remove from redis
+                redis.client.lrem("restaurants:"+client.restaurantId, 0, orderId, next);
+            },
+            function (next) {
+                //remove from redis
+                redis.client.del("restaurants:"+client.restaurantId+":orders:"+orderId, next);
             }
-            
-            
         ], function (err, res) {
-            
+            console.log("redisOrderPers.getOrder done", err, res);
+            if (err) {
+                logger.error(self.name, "error while paying restaurants:"+client.restaurantId+":order:"+orderId+" : "+err);
+                callback(err);
+            } else {
+                logger.info(self.name, "order id restaurants:"+client.restaurantId+":orders:"+orderId+" was successfully paid");
+                callback(null, res);
+            }
         });
     },
     
@@ -107,17 +140,23 @@ redisOrderPersistenceModule.extend({
     getOrder: function (client, orderId, callback) {
         var self = this;
 
+        console.log("step 1", this);
+
         async.waterfall([
             function (next) {
-                redis.client.get(self.name, "restaurants:"+client.restaurantId+":orders:"+orderId, next);
+                console.log("step 2", client, orderId);
+                redis.client.get("restaurants:"+client.restaurantId+":orders:"+orderId, next);
             }
         ], function (err, res) {
+            console.log("step 3", err, res);
             if (err) {
-                logger.error(self.name, "error while getting order["+order.id+"] from restaurant["+client.restaurantId+"] :"+err);
+                logger.error(self.name, "error while getting order["+orderId+"] from restaurant["+client.restaurantId+"] :"+err);
                 callback(err);
             } else {
-                logger.info(self.name, "successfully get restaurants:"+client.restaurantId+":orders:"+order.id);
-                callback(null, order);
+                res = JSON.parse(res);
+                logger.info(self.name, "successfully get restaurants:"+client.restaurantId+":orders:"+orderId);
+                console.log("before saving to postgres", res, res.total);
+                callback(null, res);
             }
         });
     },
@@ -152,11 +191,11 @@ redisOrderPersistenceModule.extend({
         var self = this;
 
         async.waterfall([
-            function (next) {
-                redis.client.del("restaurants:"+client.restaurantId+":orders:"+orderId, next);
-            },
             function (res, next) {
                 redis.client.lrem("restaurants:"+client.restaurantId, 0, orderId, next);
+            },
+            function (next) {
+                redis.client.del("restaurants:"+client.restaurantId+":orders:"+orderId, next);
             }
         ], function (err) {
             if (err) {

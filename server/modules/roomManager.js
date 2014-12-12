@@ -278,6 +278,11 @@ roomManagerModule.extend({
             },
             function (next) {
                 orderPersistence.payOrder(client, req.data.orderId, next);
+            },
+            function (_, next) {
+                console.log("arguments00000", arguments);
+                client.broadcast("orderPaid", { orderId: req.data.orderId });
+                next();
             }
         ], function (err, order) {
             if (err) {
@@ -285,7 +290,7 @@ roomManagerModule.extend({
                 req.respond({ success: false, error: err });
             } else {
                 logger.info(self.name, "payOrder: success!");
-                client.emit("orderPaid", { success: true, error: null });
+                client.emit("orderPaid", { orderId: req.data.orderId });
             }
         });
     },
@@ -310,7 +315,7 @@ roomManagerModule.extend({
             },
             function (next) {
                 console.log("step1 ", arguments);
-                client.broadcast("orderDeleted", req.data.orderId);
+                client.broadcast("orderDeleted", { orderId: req.data.orderId });
                 next(null);
             }
             //TODO: broadcast order

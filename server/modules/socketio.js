@@ -1,6 +1,6 @@
 var Module = require("./lib/module");
 var shortid = require("shortid");
-
+var config = require(".../config/socketio");
 
 var httpServer = require('http').createServer();
 var SocketIOServer = require('socket.io');
@@ -103,7 +103,8 @@ var init = function (dependencies, callback) {
         logger.error(self.name, "error : "+err);
     });
 
-    this._.io.listen(3000);
+    //this._.io.listen(3000);
+    this._.io.listen(config.port);
 
     this._.listeners = [];
 

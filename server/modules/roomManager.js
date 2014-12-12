@@ -305,9 +305,11 @@ roomManagerModule.extend({
                 next();
             },
             function (next) {
+                console.log("alloooo", req.data.orderId);
                 orderPersistence.deleteOrder(client, req.data.orderId, next);
             },
             function (next) {
+                console.log("step1 ", arguments);
                 client.broadcast("orderDeleted", req.data.orderId);
                 next(null);
             }

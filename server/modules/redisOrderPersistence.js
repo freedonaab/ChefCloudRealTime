@@ -249,10 +249,13 @@ redisOrderPersistenceModule.extend({
         var self = this;
 
         async.waterfall([
-            function (res, next) {
+            function (next) {
                 redis.client.lrem("restaurants:"+client.restaurantId, 0, orderId, next);
             },
-            function (next) {
+            function (_, _next) {
+                console.log("step 3", arguments);
+                var next = _next;
+                if (typeof _ == "function") next = _;
                 redis.client.del("restaurants:"+client.restaurantId+":orders:"+orderId, next);
             }
         ], function (err) {

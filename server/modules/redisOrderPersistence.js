@@ -17,7 +17,13 @@ var init = function (dependencies, callback) {
     postgres = dependencies.postgres;
 
     var _express = dependencies.express;
+
     _express.addListener('/redis/flushall', _flushRedisCallback.bind(this));
+
+    _express.addListener('/restaurants/:restaurantId/orders', _indexPaidOrders.bind(this));
+    _express.addListener('/restaurants/:restaurantId/orders/:orderId', _showPaidOrders.bind(this));
+
+
 
     logger.log(this.name, "done initializing redis order persistence");
     callback();
@@ -39,6 +45,52 @@ var _flushRedisCallback = function (req, res) {
         }
     });
 };
+
+//debug route
+var _indexPaidOrders = function (req, res) {
+
+    var orders_datas = [];
+
+    var orders_result = [];
+
+    async.waterfall([
+        function (next) {
+            postgres.query("SELECT orders.id AS \"order_id\", users.id AS \"user_id\", orders.restaurant_id, orders.price, orders.created_by, orders.created_at, users.first_name, users.familly_name, users.email, users.image FROM orders, users WHERE orders.created_by = users.id AND orders.restaurant_id = "+req.params.restaurantId,
+                next);
+        },
+        function (orders, next) {
+            console.log("after query orders", orders, next);
+            orders_result = orders.rows;
+            async.eachSeries(orders_result,
+            function (item, next) {
+                postgres.query("SELECT order_products.order_id, order_products.product_id, order_products.quantity, products.name, products.description, products.price FROM order_products, products WHERE products.id = order_products.product_id AND order_products.order_id = "+item.order_id,
+                    function (err, res) {
+                        console.log("after query order_products", err, res);
+                        item.products = res.rows;
+                        next();
+                    }
+                );
+            }, next);
+            //SELECT order_products.order_id, order_products.product_id, order_products.quantity, products.name, products.description, products.price FROM order_products, products WHERE products.id = order_products.product_id AND order_products.order_id = 19
+        }
+    ], function (err, result) {
+        console.log("fater all", err, orders_result);
+        res.send(orders_result);
+    });
+    //postgres.query("SELECT orders.id AS \"order_id\", users.id AS \"user_id\", orders.restaurant_id, orders.price, orders.created_by, orders.created_at, users.first_name, users.familly_name, users.email, users.image FROM orders, users WHERE orders.created_by = users.id AND orders.restaurant_id = "+req.params.restaurantId, function (err, data) {
+    //
+    //    postgres.query();
+    //
+    //    console.log(err, data);
+    //    res.send(data.rows);
+    //});
+
+};
+
+var _showPaidOrders = function (req, res) {
+    res.send("{}");
+};
+
 
 var redisOrderPersistenceModule = new Module("orderPersistence", {
     init: init,
@@ -77,6 +129,7 @@ redisOrderPersistenceModule.extend({
                 }, next);
             },
             function (res, next) {
+                console.log("step 1", res, next)
                 //save products in postgres
                 async.eachSeries(_.values(_order.products),
                     function (item, next) {
@@ -92,9 +145,14 @@ redisOrderPersistenceModule.extend({
             },
             function (next) {
                 //remove from redis
+                console.log("step 2", next)
                 redis.client.lrem("restaurants:"+client.restaurantId, 0, orderId, next);
             },
-            function (next) {
+            function (_, _next) {
+                console.log("step 3", arguments);
+                var next = _next;
+                if (typeof _ == "function") next = _;
+                console.log("step 3", next)
                 //remove from redis
                 redis.client.del("restaurants:"+client.restaurantId+":orders:"+orderId, next);
             }

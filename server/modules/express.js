@@ -39,10 +39,23 @@ var init = function (dependencies, callback) {
         res.sendFile(path.join(__dirname ,'..','client','index.html'));
     });
 
+    //TODO: dynamically declare this routes
     //debug route
     this.app.get('/redis/flushall', function (req, res) {
         for (var i = 0; i < self._.listeners['/redis/flushall'].length; ++i) {
             self._.listeners['/redis/flushall'][i](req, res);
+        }
+    });
+
+    this.app.get('/restaurants/:restaurantId/orders', function (req, res) {
+        for (var i = 0; i < self._.listeners['/restaurants/:restaurantId/orders'].length; ++i) {
+            self._.listeners['/restaurants/:restaurantId/orders'][i](req, res);
+        }
+    });
+
+    this.app.get('/restaurants/:restaurantId/orders/:orderIdl', function (req, res) {
+        for (var i = 0; i < self._.listeners['/restaurants/:restaurantId/orders/:orderId'].length; ++i) {
+            self._.listeners['/restaurants/:restaurantId/orders/:orderId'][i](req, res);
         }
     });
 

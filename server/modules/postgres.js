@@ -97,6 +97,11 @@ postgreModule.extend({
         });
     },
 
+    query: function (query, callback) {
+        var self = this;
+        self._.client.query(query, callback);
+    },
+
     save: function (table, rows, callback) {
         var self = this;
 

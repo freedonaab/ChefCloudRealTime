@@ -1,8 +1,9 @@
 var Module = require("./lib/module");
 var async = require("async");
+var config = require("../config/index");
 
 var logger = null;
-var postgres = null;
+var database = null;
 var redis = null;
 
 function RedisProductProvider(_redis) {
@@ -37,7 +38,7 @@ var init = function (dependencies, callback) {
     this._ = {};
 
     logger = dependencies.log;
-    postgres = dependencies.postgres;
+    database = dependencies[config.database];
     redis = dependencies.redis;
 
     this._.redisProductProvider = new RedisProductProvider(redis);
@@ -49,13 +50,13 @@ var onEvent = function (eventName, args) {
 
 };
 
-var postgresProductProviderModule = new Module("productProvider", {
+var defaultProductProviderModule = new Module("productProvider", {
     init: init,
     onEvent: onEvent,
-    dependencies: ["log", "postgres", "redis"]
+    dependencies: ["log", config.database, "redis"]
 });
 
-postgresProductProviderModule.extend({
+defaultProductProviderModule.extend({
 
     productExists: function (productId, callback) {
         var self = this;
@@ -73,7 +74,7 @@ postgresProductProviderModule.extend({
                 if (product) {
                     next(null, { exists: true, product: product });
                 } else {
-                    postgres.get("products", ["id", "name", "price"], productId, function (err, product) {
+                    database.get("products", ["id", "name", "price"], productId, function (err, product) {
                         next(null, { exists: false, product: product });
                     });
                 }
@@ -98,4 +99,4 @@ postgresProductProviderModule.extend({
     }
 });
 
-exports = module.exports = postgresProductProviderModule;
+exports = module.exports = defaultProductProviderModule;

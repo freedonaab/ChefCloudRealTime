@@ -1,7 +1,7 @@
 module.exports = {
     ip: "localhost",
-    port: 5432,
-    username: "postgres",
-    password: "postgres",
+    port: 3306,
+    username: "root",
+    password: "root",
     databaseName: "chefcloud"
 };

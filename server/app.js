@@ -1,6 +1,7 @@
 var express = require("express");
 var ModuleManager = require("./modules/lib/moduleManager");
 var modules = require("./config/modules");
+var config = require("./config/index");
 var path = require("path");
 
 //var app = express();
@@ -13,6 +14,7 @@ var path = require("path");
 //	res.sendFile(path.join(__dirname ,'..','client','index.html'));
 //});
 
+//init all modules
 var moduleManager = new ModuleManager();
 for (var i in modules) {
 	var moduleName = modules[i];
@@ -20,9 +22,20 @@ for (var i in modules) {
 	moduleManager.registerModule(module);
 	console.log("done registering module "+module.name);
 }
+
+//init database
+var databaseModule = require("./modules/"+config.database);
+moduleManager.registerModule(databaseModule);
+console.log("done registering module "+databaseModule.name);
+
 moduleManager.initialize(function (err) {
-	if (err) console.log("error: "+err);
-	else console.log("done");
+	if (err) {
+		console.log("error: "+err);
+		return;
+	}
+	var log = moduleManager.getModule("log");
+
+	log.custom("global","All modules are sucessfully initlialized", "green");
 });
 
 

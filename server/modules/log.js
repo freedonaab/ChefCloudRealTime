@@ -31,6 +31,9 @@ logModule.extend({
     },
     error: function (moduleName, message) {
         console.log(("[ERROR] ["+moduleName+"] : "+message).red);
+    },
+    custom: function (moduleName, message, color) {
+        console.log(("["+moduleName+"] : "+message)[color]);
     }
 });
 

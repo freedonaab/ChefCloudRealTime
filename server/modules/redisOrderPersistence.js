@@ -2,10 +2,11 @@ var Module = require("./lib/module");
 var shortid = require("shortid");
 var async = require("async");
 var _ = require("underscore");
+var config = require("../config/index");
 
 var logger = null;
 var redis = null;
-var postgres = null;
+var database = null;
 
 var init = function (dependencies, callback) {
     this._ = {};
@@ -14,7 +15,7 @@ var init = function (dependencies, callback) {
 
     logger = dependencies.log;
     redis = dependencies.redis;
-    postgres = dependencies.postgres;
+    database = dependencies[config.database];
 
     var _express = dependencies.express;
 
@@ -55,18 +56,18 @@ var _indexPaidOrders = function (req, res) {
 
     async.waterfall([
         function (next) {
-            postgres.query("SELECT orders.id AS \"order_id\", users.id AS \"user_id\", orders.restaurant_id, orders.price, orders.created_by, orders.created_at, users.first_name, users.familly_name, users.email, users.image FROM orders, users WHERE orders.created_by = users.id AND orders.restaurant_id = "+req.params.restaurantId,
+            database.query("SELECT orders.id AS \"order_id\", users.id AS \"user_id\", orders.restaurant_id, orders.price, orders.created_by, orders.created_at, users.first_name, users.familly_name, users.email, users.image FROM orders, users WHERE orders.created_by = users.id AND orders.restaurant_id = "+req.params.restaurantId,
                 next);
         },
         function (orders, next) {
-            console.log("after query orders", orders, next);
-            orders_result = orders.rows;
+            console.log("after query orders ", arguments);
+            orders_result = orders.rows || orders;
             async.eachSeries(orders_result,
             function (item, next) {
-                postgres.query("SELECT order_products.order_id, order_products.product_id, order_products.quantity, products.name, products.description, products.price FROM order_products, products WHERE products.id = order_products.product_id AND order_products.order_id = "+item.order_id,
+                database.query("SELECT order_products.order_id, order_products.product_id, order_products.quantity, products.name, products.description, products.price FROM order_products, products WHERE products.id = order_products.product_id AND order_products.order_id = "+item.order_id,
                     function (err, res) {
-                        console.log("after query order_products", err, res);
-                        item.products = res.rows;
+                        console.log("after query order_products", arguments);
+                        item.products = res.rows || res;
                         next();
                     }
                 );
@@ -95,7 +96,7 @@ var _showPaidOrders = function (req, res) {
 var redisOrderPersistenceModule = new Module("orderPersistence", {
     init: init,
     onEvent: onEvent,
-    dependencies: ["log", "redis", "express", "postgres"]
+    dependencies: ["log", "redis", "express", config.database]
 });
 
 //restaurant:$id:orders -> list of order ids
@@ -121,7 +122,7 @@ redisOrderPersistenceModule.extend({
             function (order, next) {
                 //save in postgres
                 _order = order;
-                postgres.save("orders", {
+                database.save("orders", {
                     created_by: client.userId,
                     restaurant_id: client.restaurantId,
                     price: order.total,
@@ -133,9 +134,9 @@ redisOrderPersistenceModule.extend({
                 //save products in postgres
                 async.eachSeries(_.values(_order.products),
                     function (item, next) {
-                        postgres.save("order_products", {
+                        database.save("order_products", {
                             id: 42,
-                            order_id: res.rows[0].id,
+                            order_id: res,
                             product_id: item.product.id,
                             quantity: item.count
                         }, next);
@@ -249,10 +250,13 @@ redisOrderPersistenceModule.extend({
         var self = this;
 
         async.waterfall([
-            function (res, next) {
+            function (next) {
                 redis.client.lrem("restaurants:"+client.restaurantId, 0, orderId, next);
             },
-            function (next) {
+            function (_, _next) {
+                console.log("step 3", arguments);
+                var next = _next;
+                if (typeof _ == "function") next = _;
                 redis.client.del("restaurants:"+client.restaurantId+":orders:"+orderId, next);
             }
         ], function (err) {

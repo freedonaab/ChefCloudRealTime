@@ -56,7 +56,7 @@ var _indexPaidOrders = function (req, res) {
 
     async.waterfall([
         function (next) {
-            database.query("SELECT orders.id AS \"order_id\", users.id AS \"user_id\", orders.restaurant_id, orders.price, orders.created_by, orders.created_at, users.first_name, users.familly_name, users.email, users.image FROM orders, users WHERE orders.created_by = users.id AND orders.restaurant_id = "+req.params.restaurantId,
+            database.query("SELECT orders.id AS \"order_id\", users.id AS \"user_id\", orders.restaurant_id, orders.price, orders.created_by, orders.created_at, users.first_name, users.familly_name, users.email, users.image FROM orders, users WHERE orders.created_by = users.id AND orders.restaurant_id = "+req.params.restaurantId+" ORDER BY orders.created_at DESC",
                 next);
         },
         function (orders, next) {

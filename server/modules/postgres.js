@@ -135,7 +135,7 @@ postgreModule.extend({
             if (err) {
                 callback(err, null);
             } else {
-                callback(null, res);
+                callback(null, res.rows[0].id);
             }
         });
     }

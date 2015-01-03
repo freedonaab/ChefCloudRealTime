@@ -187,7 +187,8 @@ roomManagerModule.extend({
                 orderPersistence.saveOrder(client, req.data.order, next);
             },
             function (order, next) {
-                client.broadcast("orderCreated", order);
+                console.log(client);
+                client.broadcast("orderCreated", {order: order, userId: client.userId});
                 next(null, order);
             }
             //TODO: broadcast order
@@ -197,7 +198,7 @@ roomManagerModule.extend({
                 logger.error(self.name, "createOrder: "+err);
             } else {
                 logger.info(self.name, "ceateOrder: success!");
-                client.emit("orderCreated", order);
+                client.emit("orderCreated", {order: order, userId: client.userId});
             }
         });
     },
@@ -247,7 +248,7 @@ roomManagerModule.extend({
                 orderPersistence.saveOrder(client, req.data.order, next);
             },
             function (order, next) {
-                client.broadcast("orderEdited", order);
+                client.broadcast("orderEdited", {order: order, userId: client.userId});
                 next(null, order);
             }
             //TODO: broadcast order
@@ -257,7 +258,7 @@ roomManagerModule.extend({
                 logger.error(self.name, "editOrder: "+err);
             } else {
                 logger.info(self.name, "editOrder: success!");
-                client.emit("orderEdited", order);
+                client.emit("orderEdited", {order: order, userId: client.userId});
             }
         });
     },
@@ -281,7 +282,7 @@ roomManagerModule.extend({
             },
             function (_, next) {
                 console.log("arguments00000", arguments);
-                client.broadcast("orderPaid", { orderId: req.data.orderId });
+                client.broadcast("orderPaid", { orderId: req.data.orderId, userId: client.userId });
                 next();
             }
         ], function (err, order) {
@@ -290,7 +291,7 @@ roomManagerModule.extend({
                 req.respond({ success: false, error: err });
             } else {
                 logger.info(self.name, "payOrder: success!");
-                client.emit("orderPaid", { orderId: req.data.orderId });
+                client.emit("orderPaid", { orderId: req.data.orderId, userId: client.userId });
             }
         });
     },
@@ -315,7 +316,7 @@ roomManagerModule.extend({
             },
             function (next) {
                 console.log("step1 ", arguments);
-                client.broadcast("orderDeleted", { orderId: req.data.orderId });
+                client.broadcast("orderDeleted", { orderId: req.data.orderId, userId: client.userId });
                 next(null);
             }
             //TODO: broadcast order
@@ -325,7 +326,7 @@ roomManagerModule.extend({
                 logger.error(self.name, "deleteOrder: "+err);
             } else {
                 logger.info(self.name, "deleteOrder success!");
-                client.emit("orderDeleted", { orderId: req.data.orderId });
+                client.emit("orderDeleted", { orderId: req.data.orderId, userId: client.userId });
             }
         });
     }

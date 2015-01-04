@@ -172,7 +172,7 @@ redisOrderPersistenceModule.extend({
     saveOrder: function (client, order, callback) {
         var self = this;
 
-        order.id = shortid.generate();
+        order.id = order.id || shortid.generate();
         order.dailyId = this._.currentId;
         this._.currentId++;
         //dummy save for now
